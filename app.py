@@ -58,7 +58,7 @@ swagger = Swagger(app, template=swagger_template)
 # =========================
 # Configuración DB y JWT
 # =========================
-db_url = os.getenv("MYSQL_URL")
+db_url = os.getenv("MYSQL_PUBLIC_URL")
 if db_url and db_url.startswith("mysql://"):
     # Normaliza a dialecto + driver de SQLAlchemy
     db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
