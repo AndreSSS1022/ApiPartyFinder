@@ -11,7 +11,6 @@ from flask_jwt_extended import JWTManager
 from flasgger import Swagger
 
 from controllers.user_controller import user_bp
-from controllers.electrodomesticos_controller import electrodomesticos_bp
 from models.db import db
 
 # =========================
@@ -84,10 +83,10 @@ logger.info("SQLAlchemy inicializado")
 # Blueprints
 # =========================
 app.register_blueprint(user_bp)
-app.register_blueprint(electrodomesticos_bp)
+
 
 logger.info("Blueprint de usuarios registrado")
-logger.info("Blueprint de electrodomésticos registrado")
+
 
 # =========================
 # Rutas utilitarias
@@ -112,7 +111,7 @@ def index():
                 "GET /": "Información de la API",
                 "GET /health": "Health check",
             },
-            "repository": "https://github.com/afmirandad/FlaskAPIExample",
+            "repository": "",
         },
         200,
     )

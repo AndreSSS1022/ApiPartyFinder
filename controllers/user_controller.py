@@ -3,7 +3,6 @@ Controlador para el modelo User.
 Define los endpoints REST y de autenticación para usuarios.
 Puedes crear más controladores siguiendo este ejemplo.
 """
-
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required
 from services.user_service import UserService
@@ -13,88 +12,37 @@ logger = logging.getLogger(__name__)
 
 user_bp = Blueprint('user_bp', __name__, url_prefix='/users')
 
-
 @user_bp.route('/register', methods=['POST'])
 def register():
-    """
-    Registro de usuario
-    ---
-    tags:
-      - Usuarios
-    consumes:
-      - application/json
-    parameters:
-      - in: body
-        name: body
-        required: true
-        schema:
-          type: object
-          required: [username, password]
-          properties:
-            username:
-              type: string
-              example: usuario1
-            password:
-              type: string
-              example: "Secreta123!"
-    responses:
-      201:
-        description: Usuario registrado exitosamente
-        schema:
-          type: object
-          properties:
-            id:
-              type: integer
-              example: 1
-            username:
-              type: string
-              example: usuario1
-      400:
-        description: Petición inválida
-        schema:
-          type: object
-          properties:
-            msg:
-              type: string
-              example: "username y password son requeridos"
-      409:
-        description: Usuario ya existe
-        schema:
-          type: object
-          properties:
-            msg:
-              type: string
-              example: "Usuario ya existe"
-      500:
-        description: Error interno al registrar
-        schema:
-          type: object
-          properties:
-            msg:
-              type: string
-              example: "No se pudo completar el registro"
-    """
     data = request.get_json() or {}
     username = data.get('username')
     password = data.get('password')
+    full_name = data.get('full_name')
+    birth_date = data.get('birth_date')
+    profile_image = data.get('profile_image')
+
     if not username or not password:
         return jsonify({"msg": "username y password son requeridos"}), 400
 
     try:
         logger.info(f'Registrando usuario: {username}')
-        user = UserService.register_user(username, password)
+        user = UserService.register_user(username, password, full_name, birth_date, profile_image)
 
-        # Soporta contrato donde el servicio devuelve dict de error
-        if isinstance(user, dict) and user.get('error') == 'Usuario ya existe':
-            logger.warning(f'Usuario ya existe: {username}')
-            return jsonify({'msg': 'Usuario ya existe'}), 409
+        if isinstance(user, dict) and user.get('error'):
+            return jsonify({'msg': user['error']}), 409
 
-        logger.info(f'Usuario registrado: {user.username} (ID: {user.id})')
-        return jsonify({'id': user.id, 'username': user.username}), 201
+        return jsonify({
+            'id': user.id,
+            'username': user.username,
+            'full_name': user.full_name,
+            'birth_date': user.birth_date.strftime("%Y-%m-%d") if user.birth_date else None,
+            'profile_image': user.profile_image
+        }), 201
 
     except Exception as e:
         logger.exception("Error en registro de usuario")
         return jsonify({'msg': 'No se pudo completar el registro', 'detail': str(e)}), 500
+
 
 
 @user_bp.route('/login', methods=['POST'])

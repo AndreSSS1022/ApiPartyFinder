@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 
 class UserRepository:
     @staticmethod
-    def get_by_username(username: str, session: Session):
-        logger.info(f'Buscando usuario: {username}')
+    def get_by_username(username, session: Session):
+        logger.info(f'Buscando usuario en repositorio: {username}')
         user = session.query(User).filter_by(username=username).first()
         if user:
             logger.info(f'Usuario encontrado: {username}')
@@ -16,11 +16,8 @@ class UserRepository:
         return user
 
     @staticmethod
-    def create_user(username: str, password: str, full_name: str, birth_date, profile_image: str, session: Session):
-        """
-        Crea un nuevo usuario con todos los campos requeridos.
-        """
-        logger.info(f'Creando usuario: {username}')
+    def create_user(username, password, full_name, birth_date, profile_image, session: Session):
+        logger.info(f'Creando usuario en repositorio: {username}')
         user = User(
             username=username,
             password=password,
@@ -30,12 +27,12 @@ class UserRepository:
         )
         session.add(user)
         session.commit()
-        logger.info(f'Usuario creado con éxito: {username} (ID: {user.id})')
+        logger.info(f'Usuario creado en repositorio: {username} (ID: {user.id})')
         return user
 
     @staticmethod
     def get_all(session: Session):
-        logger.info('Obteniendo todos los usuarios')
+        logger.info('Obteniendo todos los usuarios en repositorio')
         users = session.query(User).all()
-        logger.info(f'{len(users)} usuarios encontrados')
+        logger.info(f'{len(users)} usuarios obtenidos')
         return users
