@@ -1,8 +1,4 @@
-"""
-Controlador para el modelo User.
-Define los endpoints REST y de autenticación para usuarios.
-Puedes crear más controladores siguiendo este ejemplo.
-"""
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required
 from services.user_service import UserService
@@ -162,10 +158,3 @@ def get_users():
         logger.error(f'Error al consultar usuarios: {str(e)}')
         return jsonify({'error': 'No autenticado', 'msg': str(e)}), 401
 
-
-"""
-Para crear más controladores:
-1. Crea un archivo en la carpeta controllers (ejemplo: product_controller.py).
-2. Define un Blueprint y los endpoints necesarios.
-3. Registra el blueprint en app.py.
-"""

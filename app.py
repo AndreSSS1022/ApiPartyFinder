@@ -11,6 +11,9 @@ from flask_jwt_extended import JWTManager
 from flasgger import Swagger
 
 from controllers.user_controller import user_bp
+from controllers.bar_controller import bar_bp
+from controllers.reservation_controller import reservation_bp
+from controllers.availability_controller import availability_bp
 from models.db import db
 
 # =========================
@@ -28,22 +31,21 @@ app = Flask(__name__)
 # Configuración Swagger
 # =========================
 app.config["SWAGGER"] = {
-    "title": "FlaskAPIExample",
-    "uiversion": 3,  # UI moderna
+    "title": "PartyFinder API",
+    "uiversion": 3,
 }
 
 swagger_template = {
     "swagger": "2.0",
     "info": {
-        "title": "FlaskAPIExample",
-        "description": "API RESTful con Flask, SQLAlchemy, JWT y estructura modular.",
-        "version": "1.0.0",
+        "title": "PartyFinder API",
+        "description": "API RESTful para sistema de reservas de bares con Flask, SQLAlchemy y JWT.",
+        "version": "2.0.0",
     },
     "basePath": "/",
     "schemes": ["http", "https"],
     "consumes": ["application/json"],
     "produces": ["application/json"],
-    # Definición de seguridad para que los docstrings con `security: - Bearer: []` funcionen
     "securityDefinitions": {
         "Bearer": {
             "type": "apiKey",
@@ -58,13 +60,22 @@ swagger = Swagger(app, template=swagger_template)
 # =========================
 # Configuración DB y JWT
 # =========================
-db_url = os.getenv("MYSQL_URL")
-if db_url and db_url.startswith("mysql://"):
-    # Normaliza a dialecto + driver de SQLAlchemy
-    db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
+# Construir la URL de conexión a MySQL con las variables de Railway
+if (
+    os.getenv("MYSQLHOST")
+    and os.getenv("MYSQLUSER")
+    and os.getenv("MYSQLPASSWORD")
+    and os.getenv("MYSQLDATABASE")
+):
+    db_url = (
+        f"mysql+pymysql://{os.getenv('MYSQLUSER')}:{os.getenv('MYSQLPASSWORD')}"
+        f"@{os.getenv('MYSQLHOST')}:{os.getenv('MYSQLPORT','3306')}/{os.getenv('MYSQLDATABASE')}"
+    )
+else:
+    # Fallback si no hay variables (por ejemplo, local)
+    db_url = "sqlite:///app.db"
 
 if not db_url:
-    # Fallback útil para desarrollo local si no hay MYSQL_URL
     logger.warning("MYSQL_URL no definido. Usando SQLite local 'sqlite:///app.db'.")
     db_url = "sqlite:///app.db"
 
@@ -83,35 +94,50 @@ logger.info("SQLAlchemy inicializado")
 # Blueprints
 # =========================
 app.register_blueprint(user_bp)
+app.register_blueprint(bar_bp)
+app.register_blueprint(reservation_bp)
+app.register_blueprint(availability_bp)
 
-
-logger.info("Blueprint de usuarios registrado")
-
+logger.info("Blueprints registrados:")
+logger.info("- Usuarios")
+logger.info("- Electrodomésticos")
+logger.info("- Bares")
+logger.info("- Reservas")
+logger.info("- Disponibilidad")
 
 # =========================
 # Rutas utilitarias
 # =========================
 @app.route("/health")
 def health():
-    return {"status": "ok"}, 200
+    return {"status": "ok", "version": "2.0.0"}, 200
 
 
 @app.route("/")
 def index():
     return (
         {
-            "api": "FlaskAPIExample",
+            "api": "PartyFinder API",
+            "version": "2.0.0",
             "status": "OK",
-            "description": "API RESTful con Flask, SQLAlchemy, JWT y estructura modular.",
-            "author": "afmirandad",
+            "description": "API RESTful para sistema de reservas de bares.",
             "endpoints": {
                 "POST /users/register": "Registro de usuario",
                 "POST /users/login": "Login y obtención de JWT",
                 "GET /users/": "Listado de usuarios (requiere JWT)",
+                "GET /bars/": "Listado de bares",
+                "GET /bars/<id>": "Detalle de bar",
+                "POST /bars/": "Crear bar (requiere JWT)",
+                "POST /reservations/": "Crear reserva (requiere JWT)",
+                "GET /reservations/my-reservations": "Mis reservas (requiere JWT)",
+                "PUT /reservations/<id>/cancel": "Cancelar reserva (requiere JWT)",
+                "POST /availability/": "Crear disponibilidad (requiere JWT)",
+                "POST /availability/bulk": "Crear disponibilidad múltiple (requiere JWT)",
+                "GET /availability/bar/<id>": "Consultar disponibilidad de bar",
                 "GET /": "Información de la API",
                 "GET /health": "Health check",
+                "GET /apidocs": "Documentación Swagger"
             },
-            "repository": "",
         },
         200,
     )
@@ -122,8 +148,14 @@ def index():
 def create_tables_if_not_exist() -> None:
     """Crea las tablas definidas en modelos que heredan de db.Model."""
     with app.app_context():
+        # Importar todos los modelos antes de crear tablas
+        from models.user import User
+        from models.bar import Bar
+        from models.availability import Availability
+        from models.reservation import Reservation
+        
         db.create_all()
-        logger.info("Tablas creadas en la base de datos (db.Model)")
+        logger.info("Tablas creadas en la base de datos")
 
 create_tables_if_not_exist()
 
