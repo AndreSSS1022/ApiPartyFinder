@@ -58,10 +58,19 @@ swagger = Swagger(app, template=swagger_template)
 # =========================
 # Configuración DB y JWT
 # =========================
-db_url = os.getenv("MYSQL_URL")
-if db_url and db_url.startswith("mysql://"):
-    # Normaliza a dialecto + driver de SQLAlchemy
-    db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
+if (
+    os.getenv("MYSQLHOST")
+    and os.getenv("MYSQLUSER")
+    and os.getenv("MYSQLPASSWORD")
+    and os.getenv("MYSQLDATABASE")
+):
+    db_url = (
+        f"mysql+pymysql://{os.getenv('MYSQLUSER')}:{os.getenv('MYSQLPASSWORD')}"
+        f"@{os.getenv('MYSQLHOST')}:{os.getenv('MYSQLPORT','3306')}/{os.getenv('MYSQLDATABASE')}"
+    )
+else:
+    # Fallback si no hay variables (por ejemplo, local)
+    db_url = "sqlite:///app.db"
 
 if not db_url:
     # Fallback útil para desarrollo local si no hay MYSQL_URL
