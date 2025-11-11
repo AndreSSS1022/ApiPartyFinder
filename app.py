@@ -50,18 +50,16 @@ swagger = Swagger(app, template=swagger_template)
 # =========================
 # Configuración DB y JWT
 # =========================
-# Intentar usar Railway
-try:
-    db_url = (
-        f"mysql+pymysql://{os.getenv('MYSQLUSER')}:{os.getenv('MYSQLPASSWORD')}"
-        f"@{os.getenv('MYSQLHOST')}:{os.getenv('MYSQLPORT', '3306')}/{os.getenv('MYSQLDATABASE')}"
-    )
-    # Si falta alguna variable, forzar excepción para pasar al fallback
-    if not all([os.getenv('MYSQLUSER'), os.getenv('MYSQLPASSWORD'), os.getenv('MYSQLHOST'), os.getenv('MYSQLDATABASE')]):
-        raise ValueError("Faltan variables MySQL de entorno")
-except Exception:
-    logger.warning("Variables MySQL no definidas. Usando SQLite local 'sqlite:///app.db'.")
+# Railway: usa MYSQL_URL directamente
+db_url = os.getenv("MYSQL_URL")
+
+if not db_url:
+    logger.warning("Variable MYSQL_URL no definida. Usando SQLite local 'sqlite:///app.db'.")
     db_url = "sqlite:///app.db"
+else:
+    # Ajustar formato a SQLAlchemy (usa mysql+pymysql://)
+    if db_url.startswith("mysql://"):
+        db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
