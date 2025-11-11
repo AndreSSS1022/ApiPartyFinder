@@ -3,6 +3,7 @@ Controlador para el modelo User.
 Define los endpoints REST y de autenticación para usuarios.
 Puedes crear más controladores siguiendo este ejemplo.
 """
+
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required
 from services.user_service import UserService
@@ -12,37 +13,110 @@ logger = logging.getLogger(__name__)
 
 user_bp = Blueprint('user_bp', __name__, url_prefix='/users')
 
+
 @user_bp.route('/register', methods=['POST'])
 def register():
+    """
+    Registro de usuario
+    ---
+    tags:
+      - Usuarios
+    consumes:
+      - application/json
+    parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          type: object
+          required: [name, lastname, email, password, birthdate]
+          properties:
+            name:
+              type: string
+              example: NombreUsuario
+            lastname:
+              type: string
+              example: ApellidoUsuario
+            email:
+              type: string
+              example: usuario@gmail.com
+            birthdate:
+              type: date 
+              example: 05/05/05
+            password:
+              type: string
+              example: "Secreta123!"
+    responses:
+      201:
+        description: Usuario registrado exitosamente
+        schema:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            name:
+              type: string
+              example: usuario1
+            lastname:
+              type: string
+              example: ApellidoUsuario
+            email:
+              type: string
+              example: usuario@gmail.com
+            birthdate:
+              type: date 
+              example: 05/05/05
+      400:
+        description: Petición inválida
+        schema:
+          type: object
+          properties:
+            msg:
+              type: string
+              example: "Todos los datos son requeridos son requeridos"
+      409:
+        description: Usuario ya existe
+        schema:
+          type: object
+          properties:
+            msg:
+              type: string
+              example: "Usuario ya existe"
+      500:
+        description: Error interno al registrar
+        schema:
+          type: object
+          properties:
+            msg:
+              type: string
+              example: "No se pudo completar el registro"
+    """
     data = request.get_json() or {}
-    username = data.get('username')
+    name = data.get('name')
+    lastname = data.get('lastname')
+    email = data.get('email')
     password = data.get('password')
-    full_name = data.get('full_name')
-    birth_date = data.get('birth_date')
-    profile_image = data.get('profile_image')
+    birthdate = data.get('birthdate')
 
-    if not username or not password:
-        return jsonify({"msg": "username y password son requeridos"}), 400
+    if not name or not password or not lastname or not email or not birthdate :
+        return jsonify({"msg": "Todos los datos son requeridos"}), 400
 
     try:
-        logger.info(f'Registrando usuario: {username}')
-        user = UserService.register_user(username, password, full_name, birth_date, profile_image)
+        logger.info(f'Registrando usuario: {name, lastname, email, birthdate}')
+        user = UserService.register_user(name, lastname, email, password, birthdate)
 
-        if isinstance(user, dict) and user.get('error'):
-            return jsonify({'msg': user['error']}), 409
+        # Soporta contrato donde el servicio devuelve dict de error
+        if isinstance(user, dict) and user.get('error') == 'Usuario ya existe':
+            logger.warning(f'Usuario ya existe: {email}')
+            return jsonify({'msg': 'Usuario ya existe'}), 409
 
-        return jsonify({
-            'id': user.id,
-            'username': user.username,
-            'full_name': user.full_name,
-            'birth_date': user.birth_date.strftime("%Y-%m-%d") if user.birth_date else None,
-            'profile_image': user.profile_image
-        }), 201
+        logger.info(f'Usuario registrado: {user.email} (ID: {user.id})')
+        return jsonify({'id': user.id, 'user': user.email}), 201
 
     except Exception as e:
         logger.exception("Error en registro de usuario")
         return jsonify({'msg': 'No se pudo completar el registro', 'detail': str(e)}), 500
-
 
 
 @user_bp.route('/login', methods=['POST'])
@@ -60,11 +134,11 @@ def login():
         required: true
         schema:
           type: object
-          required: [username, password]
+          required: [email, password]
           properties:
-            username:
+            email:
               type: string
-              example: usuario1
+              example: usuario@gmail.com
             password:
               type: string
               example: "Secreta123!"
@@ -84,7 +158,7 @@ def login():
           properties:
             msg:
               type: string
-              example: "username y password son requeridos"
+              example: "email y password son requeridos"
       401:
         description: Credenciales inválidas
         schema:
@@ -95,19 +169,19 @@ def login():
               example: "Credenciales inválidas"
     """
     data = request.get_json() or {}
-    username = data.get('username')
+    email= data.get('email')
     password = data.get('password')
-    if not username or not password:
-        return jsonify({"msg": "username y password son requeridos"}), 400
+    if not email or not password:
+        return jsonify({"msg": "email y password son requeridos"}), 400
 
-    logger.info(f'Intento de login para usuario: {username}')
-    user = UserService.authenticate(username, password)
+    logger.info(f'Intento de login para usuario: {email}')
+    user = UserService.authenticate(email, password)
     if user:
         access_token = create_access_token(identity=str(user.id))  # identity debe ser string
-        logger.info(f'Login exitoso para usuario: {username}')
+        logger.info(f'Login exitoso para usuario: {email}')
         return jsonify({'access_token': access_token}), 200
 
-    logger.warning(f'Login fallido para usuario: {username}')
+    logger.warning(f'Login fallido para usuario: {email}')
     return jsonify({'msg': 'Credenciales inválidas'}), 401
 
 

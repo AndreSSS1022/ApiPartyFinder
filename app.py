@@ -1,3 +1,8 @@
+"""
+Archivo principal de la aplicación Flask.
+Configura la conexión a MySQL, JWT y registra los blueprints de los controladores.
+"""
+
 import os
 import logging
 from dotenv import load_dotenv
@@ -24,7 +29,7 @@ app = Flask(__name__)
 # =========================
 app.config["SWAGGER"] = {
     "title": "FlaskAPIExample",
-    "uiversion": 3,
+    "uiversion": 3,  # UI moderna
 }
 
 swagger_template = {
@@ -36,6 +41,9 @@ swagger_template = {
     },
     "basePath": "/",
     "schemes": ["http", "https"],
+    "consumes": ["application/json"],
+    "produces": ["application/json"],
+    # Definición de seguridad para que los docstrings con `security: - Bearer: []` funcionen
     "securityDefinitions": {
         "Bearer": {
             "type": "apiKey",
@@ -50,16 +58,15 @@ swagger = Swagger(app, template=swagger_template)
 # =========================
 # Configuración DB y JWT
 # =========================
-# Railway: usa MYSQL_URL directamente
 db_url = os.getenv("MYSQL_URL")
+if db_url and db_url.startswith("mysql://"):
+    # Normaliza a dialecto + driver de SQLAlchemy
+    db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
 
 if not db_url:
-    logger.warning("Variable MYSQL_URL no definida. Usando SQLite local 'sqlite:///app.db'.")
+    # Fallback útil para desarrollo local si no hay MYSQL_URL
+    logger.warning("MYSQL_URL no definido. Usando SQLite local 'sqlite:///app.db'.")
     db_url = "sqlite:///app.db"
-else:
-    # Ajustar formato a SQLAlchemy (usa mysql+pymysql://)
-    if db_url.startswith("mysql://"):
-        db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -76,7 +83,9 @@ logger.info("SQLAlchemy inicializado")
 # Blueprints
 # =========================
 app.register_blueprint(user_bp)
+
 logger.info("Blueprint de usuarios registrado")
+logger.info("Blueprint de electrodomésticos registrado")
 
 # =========================
 # Rutas utilitarias
@@ -101,6 +110,7 @@ def index():
                 "GET /": "Información de la API",
                 "GET /health": "Health check",
             },
+            "repository": "https://github.com/afmirandad/FlaskAPIExample",
         },
         200,
     )
@@ -109,6 +119,7 @@ def index():
 # Creación de tablas
 # =========================
 def create_tables_if_not_exist() -> None:
+    """Crea las tablas definidas en modelos que heredan de db.Model."""
     with app.app_context():
         db.create_all()
         logger.info("Tablas creadas en la base de datos (db.Model)")
@@ -126,6 +137,7 @@ def not_found(e):
 def server_error(e):
     logger.exception("Error interno no controlado")
     return jsonify({"error": "Internal Server Error", "msg": "Ocurrió un error interno"}), 500
+
 
 if __name__ == "__main__":
     logger.info("Ejecutando como script principal")
