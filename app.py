@@ -1,8 +1,3 @@
-"""
-Archivo principal de la aplicación Flask.
-Configura la conexión a MySQL, JWT y registra los blueprints de los controladores.
-"""
-
 import os
 import logging
 from dotenv import load_dotenv
@@ -29,7 +24,7 @@ app = Flask(__name__)
 # =========================
 app.config["SWAGGER"] = {
     "title": "FlaskAPIExample",
-    "uiversion": 3,  # UI moderna
+    "uiversion": 3,
 }
 
 swagger_template = {
@@ -41,9 +36,6 @@ swagger_template = {
     },
     "basePath": "/",
     "schemes": ["http", "https"],
-    "consumes": ["application/json"],
-    "produces": ["application/json"],
-    # Definición de seguridad para que los docstrings con `security: - Bearer: []` funcionen
     "securityDefinitions": {
         "Bearer": {
             "type": "apiKey",
@@ -58,23 +50,17 @@ swagger = Swagger(app, template=swagger_template)
 # =========================
 # Configuración DB y JWT
 # =========================
-if (
-    os.getenv("MYSQLHOST")
-    and os.getenv("MYSQLUSER")
-    and os.getenv("MYSQLPASSWORD")
-    and os.getenv("MYSQLDATABASE")
-):
+# Intentar usar Railway
+try:
     db_url = (
         f"mysql+pymysql://{os.getenv('MYSQLUSER')}:{os.getenv('MYSQLPASSWORD')}"
-        f"@{os.getenv('MYSQLHOST')}:{os.getenv('MYSQLPORT','3306')}/{os.getenv('MYSQLDATABASE')}"
+        f"@{os.getenv('MYSQLHOST')}:{os.getenv('MYSQLPORT', '3306')}/{os.getenv('MYSQLDATABASE')}"
     )
-else:
-    # Fallback si no hay variables (por ejemplo, local)
-    db_url = "sqlite:///app.db"
-
-if not db_url:
-    # Fallback útil para desarrollo local si no hay MYSQL_URL
-    logger.warning("MYSQL_URL no definido. Usando SQLite local 'sqlite:///app.db'.")
+    # Si falta alguna variable, forzar excepción para pasar al fallback
+    if not all([os.getenv('MYSQLUSER'), os.getenv('MYSQLPASSWORD'), os.getenv('MYSQLHOST'), os.getenv('MYSQLDATABASE')]):
+        raise ValueError("Faltan variables MySQL de entorno")
+except Exception:
+    logger.warning("Variables MySQL no definidas. Usando SQLite local 'sqlite:///app.db'.")
     db_url = "sqlite:///app.db"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = db_url
@@ -92,10 +78,7 @@ logger.info("SQLAlchemy inicializado")
 # Blueprints
 # =========================
 app.register_blueprint(user_bp)
-
-
 logger.info("Blueprint de usuarios registrado")
-
 
 # =========================
 # Rutas utilitarias
@@ -120,7 +103,6 @@ def index():
                 "GET /": "Información de la API",
                 "GET /health": "Health check",
             },
-            "repository": "",
         },
         200,
     )
@@ -129,7 +111,6 @@ def index():
 # Creación de tablas
 # =========================
 def create_tables_if_not_exist() -> None:
-    """Crea las tablas definidas en modelos que heredan de db.Model."""
     with app.app_context():
         db.create_all()
         logger.info("Tablas creadas en la base de datos (db.Model)")
@@ -147,7 +128,6 @@ def not_found(e):
 def server_error(e):
     logger.exception("Error interno no controlado")
     return jsonify({"error": "Internal Server Error", "msg": "Ocurrió un error interno"}), 500
-
 
 if __name__ == "__main__":
     logger.info("Ejecutando como script principal")
