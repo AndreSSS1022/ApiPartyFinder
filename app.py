@@ -85,7 +85,6 @@ logger.info("SQLAlchemy inicializado")
 app.register_blueprint(user_bp)
 
 logger.info("Blueprint de usuarios registrado")
-logger.info("Blueprint de electrodomésticos registrado")
 
 # =========================
 # Rutas utilitarias

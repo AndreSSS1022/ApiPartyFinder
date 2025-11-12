@@ -29,20 +29,11 @@ def register():
         required: true
         schema:
           type: object
-          required: [name, lastname, email, password, birthdate]
+          required: [username, password]
           properties:
-            name:
+            username:
               type: string
-              example: NombreUsuario
-            lastname:
-              type: string
-              example: ApellidoUsuario
-            email:
-              type: string
-              example: usuario@gmail.com
-            birthdate:
-              type: date 
-              example: 05/05/05
+              example: usuario1
             password:
               type: string
               example: "Secreta123!"
@@ -55,18 +46,9 @@ def register():
             id:
               type: integer
               example: 1
-            name:
+            username:
               type: string
               example: usuario1
-            lastname:
-              type: string
-              example: ApellidoUsuario
-            email:
-              type: string
-              example: usuario@gmail.com
-            birthdate:
-              type: date 
-              example: 05/05/05
       400:
         description: Petición inválida
         schema:
@@ -74,7 +56,7 @@ def register():
           properties:
             msg:
               type: string
-              example: "Todos los datos son requeridos son requeridos"
+              example: "username y password son requeridos"
       409:
         description: Usuario ya existe
         schema:
@@ -93,26 +75,22 @@ def register():
               example: "No se pudo completar el registro"
     """
     data = request.get_json() or {}
-    name = data.get('name')
-    lastname = data.get('lastname')
-    email = data.get('email')
+    username = data.get('username')
     password = data.get('password')
-    birthdate = data.get('birthdate')
-
-    if not name or not password or not lastname or not email or not birthdate :
-        return jsonify({"msg": "Todos los datos son requeridos"}), 400
+    if not username or not password:
+        return jsonify({"msg": "username y password son requeridos"}), 400
 
     try:
-        logger.info(f'Registrando usuario: {name, lastname, email, birthdate}')
-        user = UserService.register_user(name, lastname, email, password, birthdate)
+        logger.info(f'Registrando usuario: {username}')
+        user = UserService.register_user(username, password)
 
         # Soporta contrato donde el servicio devuelve dict de error
         if isinstance(user, dict) and user.get('error') == 'Usuario ya existe':
-            logger.warning(f'Usuario ya existe: {email}')
+            logger.warning(f'Usuario ya existe: {username}')
             return jsonify({'msg': 'Usuario ya existe'}), 409
 
-        logger.info(f'Usuario registrado: {user.email} (ID: {user.id})')
-        return jsonify({'id': user.id, 'user': user.email}), 201
+        logger.info(f'Usuario registrado: {user.username} (ID: {user.id})')
+        return jsonify({'id': user.id, 'username': user.username}), 201
 
     except Exception as e:
         logger.exception("Error en registro de usuario")
@@ -134,11 +112,11 @@ def login():
         required: true
         schema:
           type: object
-          required: [email, password]
+          required: [username, password]
           properties:
-            email:
+            username:
               type: string
-              example: usuario@gmail.com
+              example: usuario1
             password:
               type: string
               example: "Secreta123!"
@@ -158,7 +136,7 @@ def login():
           properties:
             msg:
               type: string
-              example: "email y password son requeridos"
+              example: "username y password son requeridos"
       401:
         description: Credenciales inválidas
         schema:
@@ -169,19 +147,19 @@ def login():
               example: "Credenciales inválidas"
     """
     data = request.get_json() or {}
-    email= data.get('email')
+    username = data.get('username')
     password = data.get('password')
-    if not email or not password:
-        return jsonify({"msg": "email y password son requeridos"}), 400
+    if not username or not password:
+        return jsonify({"msg": "username y password son requeridos"}), 400
 
-    logger.info(f'Intento de login para usuario: {email}')
-    user = UserService.authenticate(email, password)
+    logger.info(f'Intento de login para usuario: {username}')
+    user = UserService.authenticate(username, password)
     if user:
         access_token = create_access_token(identity=str(user.id))  # identity debe ser string
-        logger.info(f'Login exitoso para usuario: {email}')
+        logger.info(f'Login exitoso para usuario: {username}')
         return jsonify({'access_token': access_token}), 200
 
-    logger.warning(f'Login fallido para usuario: {email}')
+    logger.warning(f'Login fallido para usuario: {username}')
     return jsonify({'msg': 'Credenciales inválidas'}), 401
 
 
